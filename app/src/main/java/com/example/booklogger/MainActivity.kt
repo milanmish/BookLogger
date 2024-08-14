@@ -152,16 +152,19 @@ fun BookItem(
             .width(100.dp)
             .height(150.dp)
             .background(Color.Gray)
-            .combinedClickable(
-                onClick = { onClick() },
-                onLongClick = { onLongClick() }
-            )
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { onClick() },
+                    onLongPress = { onLongClick() }
+                )
+            }
             .padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(text = bookDetails.name, color = Color.White)
     }
 }
+
 
 
 @Composable
