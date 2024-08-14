@@ -20,7 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Alignment
 import com.example.booklogger.ui.theme.BookLoggerTheme
 import androidx.navigation.NavHostController // For navigation controller
 import androidx.navigation.compose.NavHost // For setting up the navigation host
@@ -37,10 +37,15 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Book Logger",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                    NavHost(
+                        navController = navController,
+                        startDestination = "home",
+                        Modifier.padding(innerPadding)
+                    ) {
+                        composable("home") { HomeScreen(navController) }
+                        composable("recentlyRead") { RecentlyReadScreen() }
+
+                    }
                 }
             }
         }
@@ -48,18 +53,19 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
+fun HomeScreen(navController: NavHostController, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(-25.dp)) {
+        verticalArrangement = Arrangement.spacedBy(16.dp) // Adjusted spacing
+    ) {
         Text(
-            text = "Welcome to $name!",
-            modifier = modifier
+            text = "Welcome to Book Logger!",
+            modifier = Modifier.padding(16.dp)
         )
 
         Text(
             text = "Recently Read",
-            modifier = modifier
+            modifier = Modifier.padding(16.dp)
         )
 
         Box(
@@ -68,14 +74,22 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
                 .height(100.dp)
                 .background(Color.Gray)
                 .clickable {
-                    navController.navigate("new_page")
+                    navController.navigate("recentlyRead") // Updated navigation route
                 }
-        )
+        ) {
+            Text(
+                text = "Go to Recently Read",
+                color = Color.White,
+                modifier = Modifier
+                    .padding(16.dp)
+                    .align(Alignment.Center) // Center text within the Box
+            )
+        }
     }
 }
 
 @Composable
-fun NewPage(){
+fun RecentlyReadScreen(){
     Text(text = "This is a new page")
 }
 
@@ -83,8 +97,8 @@ fun NewPage(){
 
 @Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
+fun HomeScreenPreview() {
     BookLoggerTheme {
-        Greeting("Android")
+        HomeScreen(navController = rememberNavController())
     }
 }
