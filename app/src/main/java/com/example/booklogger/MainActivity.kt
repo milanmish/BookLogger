@@ -6,9 +6,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.navigation.NavHostController
@@ -25,8 +27,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.booklogger.ui.theme.BookLoggerTheme
 import kotlinx.coroutines.delay
+import java.util.UUID
 
 data class BookDetails(
+    val id: String = UUID.randomUUID().toString(), // Unique ID for each book
     val name: String,
     val pages: String,
     val time: String,
@@ -93,24 +97,28 @@ fun HomeScreen(navController: NavHostController, bookButtons: List<BookDetails>,
             modifier = Modifier.padding(top = 8.dp, start = 0.dp, end = 8.dp)
         )
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
+        // Use LazyRow for horizontal scrolling
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .width(100.dp)
-                    .height(150.dp)
-                    .background(Color.Gray)
-                    .clickable { navController.navigate("bookLog") }
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "+", color = Color.White)
+            // Add button with original dimensions and placement
+            item {
+                Box(
+                    modifier = Modifier
+                        .width(100.dp)
+                        .height(150.dp)
+                        .background(Color.Gray)
+                        .clickable { navController.navigate("bookLog") }
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "+", color = Color.White, fontSize = 24.sp)
+                }
             }
 
-            // Create a grey box for each logged book
-            bookButtons.forEach { bookDetails ->
+            // Display book items
+            items(bookButtons, key = { it.id }) { bookDetails ->
                 BookItem(
                     bookDetails = bookDetails,
                     onClick = {
@@ -152,9 +160,9 @@ fun BookItem(
             .width(100.dp)
             .height(150.dp)
             .background(Color.Gray)
+            .clickable { onClick() }
             .pointerInput(Unit) {
                 detectTapGestures(
-                    onTap = { onClick() },
                     onLongPress = { onLongClick() }
                 )
             }
@@ -164,8 +172,6 @@ fun BookItem(
         Text(text = bookDetails.name, color = Color.White)
     }
 }
-
-
 
 @Composable
 fun DeleteConfirmationDialog(
@@ -271,6 +277,6 @@ fun BookDetailScreen(bookName: String, numPages: String, readingTime: String, bo
 @Composable
 fun HomeScreenPreview() {
     BookLoggerTheme {
-        HomeScreen(navController = rememberNavController(), bookButtons = listOf(BookDetails("Sample Book", "300", "5 hours", "4.5"))) { }
+        HomeScreen(navController = rememberNavController(), bookButtons = listOf(BookDetails(name = "Sample Book", pages = "300", time = "5 hours", rating = "4.5"))) { }
     }
 }
