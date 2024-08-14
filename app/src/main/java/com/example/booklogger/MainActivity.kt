@@ -132,7 +132,7 @@ fun HomeScreen(
         )
 
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(horizontal = 0.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Box(
@@ -141,7 +141,7 @@ fun HomeScreen(
                     .height(150.dp)
                     .background(Color.Gray)
                     .clickable { navController.navigate("bookLog") }
-                    .padding(16.dp),
+                    .padding(0.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(text = "+", color = Color.White, fontSize = 24.sp)
@@ -170,7 +170,7 @@ fun HomeScreen(
                 .height(40.dp)
                 .background(Color.LightGray)
                 .clickable { showGoalDialog = true }
-                .padding(8.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp), // Align with other content
             contentAlignment = Alignment.Center
         ) {
             val progress = (totalTimeLast24Hours / dailyGoal).coerceIn(0.0, 1.0)
@@ -178,6 +178,7 @@ fun HomeScreen(
         }
     }
 }
+
 
 @Composable
 fun LogBookRead(navController: NavHostController, onBookLogged: (BookDetails) -> Unit) {
