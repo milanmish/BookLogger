@@ -268,17 +268,17 @@ fun BookDetailScreen(
     }
 
     if (showEditDialog) {
+        var name by remember { mutableStateOf(updatedBookDetails.name) }
+        var totalTime by remember { mutableStateOf(updatedBookDetails.totalTime.toString()) }
+        var timeToday by remember { mutableStateOf(updatedBookDetails.timeToday.toString()) }
+        var pages by remember { mutableStateOf(updatedBookDetails.pages.toString()) }
+        var rating by remember { mutableStateOf(updatedBookDetails.rating.toString()) }
+
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
             title = { Text("Edit Book Details") },
             text = {
                 Column {
-                    var name by remember { mutableStateOf(updatedBookDetails.name) }
-                    var totalTime by remember { mutableStateOf(updatedBookDetails.totalTime.toString()) }
-                    var timeToday by remember { mutableStateOf(updatedBookDetails.timeToday.toString()) }
-                    var pages by remember { mutableStateOf(updatedBookDetails.pages.toString()) }
-                    var rating by remember { mutableStateOf(updatedBookDetails.rating.toString()) }
-
                     TextField(
                         value = name,
                         onValueChange = { name = it },
@@ -312,26 +312,29 @@ fun BookDetailScreen(
                         label = { Text("Rating (1-5)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
-
-                    Button(
-                        onClick = {
-                            val newTimeToday = timeToday.toDoubleOrNull() ?: 0.0
-                            updateBookDetails(newTimeToday)
-                            showEditDialog = false
-                        },
-                        modifier = Modifier.padding(top = 16.dp)
-                    ) {
-                        Text("Save Changes")
-                    }
                 }
             },
             confirmButton = {
                 Button(onClick = {
-                    val newTimeToday = updatedBookDetails.timeToday
+                    val newTotalTime = totalTime.toDoubleOrNull() ?: updatedBookDetails.totalTime
+                    val newTimeToday = timeToday.toDoubleOrNull() ?: updatedBookDetails.timeToday
+                    val newPages = pages.toIntOrNull() ?: updatedBookDetails.pages
+                    val newRating = rating.toIntOrNull() ?: updatedBookDetails.rating
+
+                    updatedBookDetails = updatedBookDetails.copy(
+                        name = name,
+                        totalTime = newTotalTime,
+                        timeToday = newTimeToday,
+                        pages = newPages,
+                        rating = newRating
+                    )
+
+                    // Reset timeToday and update totalTime
                     updateBookDetails(newTimeToday)
+
                     showEditDialog = false
                 }) {
-                    Text("Save")
+                    Text("Save Changes")
                 }
             }
         )
@@ -362,13 +365,15 @@ fun BookDetailScreen(
 
         Text("Book Details", fontSize = 24.sp)
 
-        Text("Name: ${bookDetails.name}")
-        Text("Total Time Read: ${bookDetails.totalTime} hours")
-        Text("Time Read Today: ${bookDetails.timeToday} hours")
-        Text("Pages Read: ${bookDetails.pages}")
-        Text("Rating: ${bookDetails.rating}")
+        Text("Name: ${updatedBookDetails.name}")
+        Text("Total Time Read: ${updatedBookDetails.totalTime} hours")
+        Text("Time Read Today: ${updatedBookDetails.timeToday} hours")
+        Text("Pages Read: ${updatedBookDetails.pages}")
+        Text("Rating: ${updatedBookDetails.rating}")
     }
 }
+
+
 
 @Preview(showBackground = true)
 @Composable
