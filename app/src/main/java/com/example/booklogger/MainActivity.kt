@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
                         Modifier.padding(innerPadding)
                     ) {
                         composable("home") { HomeScreen(navController) }
-                        composable("bookLog") { LogBookRead() }
+                        composable("bookLog") { LogBookRead(navController) }
                     }
                 }
             }
@@ -94,7 +94,7 @@ fun HomeScreen(navController: NavHostController, modifier: Modifier = Modifier) 
 }
 
 @Composable
-fun LogBookRead() {
+fun LogBookRead(navController: NavHostController) {
     val bookName = remember { mutableStateOf("") }
     val numPages = remember { mutableStateOf("") }
     val readingTime = remember { mutableStateOf("") }
@@ -135,6 +135,9 @@ fun LogBookRead() {
                 println("Number of Pages: ${numPages.value}")
                 println("Reading Time: ${readingTime.value}")
                 println("Book Rating: ${bookRating.value}")
+
+                // Navigate back to the home screen
+                navController.popBackStack() // Pops the current screen off the stack
             },
             modifier = Modifier.padding(top = 16.dp)
         ) {
