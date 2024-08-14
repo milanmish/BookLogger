@@ -268,73 +268,47 @@ fun BookDetailScreen(
     }
 
     if (showEditDialog) {
-        var name by remember { mutableStateOf(updatedBookDetails.name) }
-        var totalTime by remember { mutableStateOf(updatedBookDetails.totalTime.toString()) }
-        var timeToday by remember { mutableStateOf(updatedBookDetails.timeToday.toString()) }
-        var pages by remember { mutableStateOf(updatedBookDetails.pages.toString()) }
-        var rating by remember { mutableStateOf(updatedBookDetails.rating.toString()) }
+        var newTimeToday by remember { mutableStateOf(updatedBookDetails.timeToday.toString()) }
+        var newPages by remember { mutableStateOf(updatedBookDetails.pages.toString()) }
+        var newRating by remember { mutableStateOf(updatedBookDetails.rating.toString()) }
 
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
             title = { Text("Edit Book Details") },
             text = {
-                Column {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                     TextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text("Book Name") }
-                    )
-
-                    TextField(
-                        value = totalTime,
-                        onValueChange = { totalTime = it },
-                        label = { Text("Total Time Read (hours)") },
+                        value = newTimeToday,
+                        onValueChange = { newTimeToday = it },
+                        label = { Text("Time read today (hours)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
 
                     TextField(
-                        value = timeToday,
-                        onValueChange = { timeToday = it },
-                        label = { Text("Time Read Today (hours)") },
+                        value = newPages,
+                        onValueChange = { newPages = it },
+                        label = { Text("Pages read") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
 
                     TextField(
-                        value = pages,
-                        onValueChange = { pages = it },
-                        label = { Text("Pages") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
-
-                    TextField(
-                        value = rating,
-                        onValueChange = { rating = it },
-                        label = { Text("Rating (1-5)") },
+                        value = newRating,
+                        onValueChange = { newRating = it },
+                        label = { Text("Book rating (1-5)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
             },
             confirmButton = {
                 Button(onClick = {
-                    val newTotalTime = totalTime.toDoubleOrNull() ?: updatedBookDetails.totalTime
-                    val newTimeToday = timeToday.toDoubleOrNull() ?: updatedBookDetails.timeToday
-                    val newPages = pages.toIntOrNull() ?: updatedBookDetails.pages
-                    val newRating = rating.toIntOrNull() ?: updatedBookDetails.rating
-
-                    updatedBookDetails = updatedBookDetails.copy(
-                        name = name,
-                        totalTime = newTotalTime,
-                        timeToday = newTimeToday,
-                        pages = newPages,
-                        rating = newRating
-                    )
-
-                    // Reset timeToday and update totalTime
-                    updateBookDetails(newTimeToday)
-
+                    val newTimeTodayValue = newTimeToday.toDoubleOrNull() ?: updatedBookDetails.timeToday
+                    updateBookDetails(newTimeTodayValue)
                     showEditDialog = false
                 }) {
-                    Text("Save Changes")
+                    Text("Save")
                 }
             }
         )
@@ -344,41 +318,26 @@ fun BookDetailScreen(
         modifier = Modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Row for Home and Edit Buttons
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            // Home Button
-            Button(
-                onClick = { navController.navigate("home") },
-                modifier = Modifier.padding(bottom = 16.dp)
-            ) {
-                Text("Home")
-            }
+        Text(text = "Book Details: ${bookDetails.name}")
 
-            // Edit Details Button
-            Button(onClick = { showEditDialog = true }) {
-                Text("Edit Details")
-            }
+        Text(text = "Total Time: ${bookDetails.totalTime} hours")
+        Text(text = "Time Read Today: ${bookDetails.timeToday} hours")
+        Text(text = "Pages Read: ${bookDetails.pages}")
+        Text(text = "Rating: ${bookDetails.rating}")
+
+        Button(onClick = { showEditDialog = true }) {
+            Text("Edit Details")
         }
 
-        Text("Book Details", fontSize = 24.sp)
-
-        Text("Name: ${updatedBookDetails.name}")
-        Text("Total Time Read: ${updatedBookDetails.totalTime} hours")
-        Text("Time Read Today: ${updatedBookDetails.timeToday} hours")
-        Text("Pages Read: ${updatedBookDetails.pages}")
-        Text("Rating: ${updatedBookDetails.rating}")
-    }
-}
-
-
-
-@Preview(showBackground = true)
-@Composable
-fun DefaultPreview() {
-    BookLoggerTheme {
-        HomeScreen(rememberNavController(), emptyList(), 1.0) { _, _ -> }
+        Button(
+            onClick = {
+                navController.navigate("home") {
+                    popUpTo("home") { inclusive = true }
+                }
+            },
+            modifier = Modifier.padding(top = 16.dp)
+        ) {
+            Text("Back to Home")
+        }
     }
 }
