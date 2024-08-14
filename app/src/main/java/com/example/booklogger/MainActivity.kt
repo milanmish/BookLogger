@@ -6,6 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -16,11 +18,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.booklogger.ui.theme.BookLoggerTheme
+import kotlinx.coroutines.delay
 
 data class BookDetails(
     val name: String,
@@ -61,7 +65,7 @@ class MainActivity : ComponentActivity() {
                             val numPages = backStackEntry.arguments?.getString("pages") ?: ""
                             val readingTime = backStackEntry.arguments?.getString("time") ?: ""
                             val bookRating = backStackEntry.arguments?.getString("rating") ?: ""
-                            BookDetailScreen(bookName, numPages, readingTime, bookRating)
+                            BookDetailScreen(bookName, numPages, readingTime, bookRating, navController) // Pass navController here
                         }
                     }
                 }
@@ -72,6 +76,9 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun HomeScreen(navController: NavHostController, bookButtons: List<BookDetails>, onBookButtonsUpdated: (List<BookDetails>) -> Unit) {
+    var showDialog by remember { mutableStateOf(false) }
+    var bookToDelete by remember { mutableStateOf<BookDetails?>(null) }
+
     Column(
         modifier = Modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -104,22 +111,84 @@ fun HomeScreen(navController: NavHostController, bookButtons: List<BookDetails>,
 
             // Create a grey box for each logged book
             bookButtons.forEach { bookDetails ->
-                Box(
-                    modifier = Modifier
-                        .width(100.dp)
-                        .height(150.dp)
-                        .background(Color.Gray)
-                        .clickable {
-                            navController.navigate("bookDetail/${bookDetails.name}?pages=${bookDetails.pages}&time=${bookDetails.time}&rating=${bookDetails.rating}")
-                        }
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = bookDetails.name, color = Color.White)
-                }
+                BookItem(
+                    bookDetails = bookDetails,
+                    onClick = {
+                        navController.navigate("bookDetail/${bookDetails.name}?pages=${bookDetails.pages}&time=${bookDetails.time}&rating=${bookDetails.rating}")
+                    },
+                    onLongClick = {
+                        bookToDelete = bookDetails
+                        showDialog = true
+                    }
+                )
             }
         }
+
+        if (showDialog && bookToDelete != null) {
+            DeleteConfirmationDialog(
+                bookDetails = bookToDelete!!,
+                onDeleteConfirmed = {
+                    onBookButtonsUpdated(bookButtons - bookToDelete!!)
+                    showDialog = false
+                    bookToDelete = null
+                },
+                onDismiss = {
+                    showDialog = false
+                    bookToDelete = null
+                }
+            )
+        }
     }
+}
+
+@Composable
+fun BookItem(
+    bookDetails: BookDetails,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .width(100.dp)
+            .height(150.dp)
+            .background(Color.Gray)
+            .combinedClickable(
+                onClick = { onClick() },
+                onLongClick = { onLongClick() }
+            )
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text = bookDetails.name, color = Color.White)
+    }
+}
+
+
+@Composable
+fun DeleteConfirmationDialog(
+    bookDetails: BookDetails,
+    onDeleteConfirmed: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = "Delete Book")
+        },
+        text = {
+            Text(text = "Are you sure you want to delete ${bookDetails.name}?")
+        },
+        confirmButton = {
+            TextButton(onClick = onDeleteConfirmed) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
@@ -174,7 +243,7 @@ fun LogBookRead(navController: NavHostController, onBookLogged: (BookDetails) ->
 }
 
 @Composable
-fun BookDetailScreen(bookName: String, numPages: String, readingTime: String, bookRating: String) {
+fun BookDetailScreen(bookName: String, numPages: String, readingTime: String, bookRating: String, navController: NavHostController) {
     Column(
         modifier = Modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -184,6 +253,14 @@ fun BookDetailScreen(bookName: String, numPages: String, readingTime: String, bo
         Text(text = "Pages: $numPages")
         Text(text = "Time: $readingTime hrs")
         Text(text = "Rating: $bookRating stars")
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = { navController.navigate("home") } // Navigate back to the home screen
+        ) {
+            Text(text = "Back to Home")
+        }
     }
 }
 
