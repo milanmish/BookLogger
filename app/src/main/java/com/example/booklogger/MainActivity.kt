@@ -249,8 +249,8 @@ fun BookDetailScreen(
     var showEditDialog by remember { mutableStateOf(false) }
     var updatedBookDetails by remember { mutableStateOf(bookDetails) }
 
-    // Function to reset timeToday and update totalTime
-    fun updateBookDetails(newTimeToday: Double) {
+    // Function to update the book details including timeToday, pages, and rating
+    fun updateBookDetails(newTimeToday: Double, newPages: Int, newRating: Int) {
         val currentTimestamp = System.currentTimeMillis()
         val daysSinceCreation = (currentTimestamp - bookDetails.creationTimestamp) / (24 * 60 * 60 * 1000)
 
@@ -262,7 +262,9 @@ fun BookDetailScreen(
 
         updatedBookDetails = updatedBookDetails.copy(
             timeToday = if (daysSinceCreation >= 1) 0.0 else newTimeToday,
-            totalTime = newTotalTime
+            totalTime = newTotalTime,
+            pages = newPages,
+            rating = newRating
         )
         onUpdate(updatedBookDetails)
     }
@@ -305,7 +307,9 @@ fun BookDetailScreen(
             confirmButton = {
                 Button(onClick = {
                     val newTimeTodayValue = newTimeToday.toDoubleOrNull() ?: updatedBookDetails.timeToday
-                    updateBookDetails(newTimeTodayValue)
+                    val newPagesValue = newPages.toIntOrNull() ?: updatedBookDetails.pages
+                    val newRatingValue = newRating.toIntOrNull() ?: updatedBookDetails.rating
+                    updateBookDetails(newTimeTodayValue, newPagesValue, newRatingValue)
                     showEditDialog = false
                 }) {
                     Text("Save")
