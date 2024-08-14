@@ -46,18 +46,13 @@ class MainActivity : ComponentActivity() {
                         Modifier.padding(innerPadding)
                     ) {
                         composable("home") {
-                            HomeScreen(
-                                navController = navController,
-                                bookDetailsList = bookDetailsList,
-                                dailyGoal = dailyGoal,
-                                onUpdate = { updatedList, goal ->
-                                    bookDetailsList = updatedList
-                                    dailyGoal = goal
-                                }
-                            )
+                            HomeScreen(navController, bookDetailsList, dailyGoal) { updatedList, goal ->
+                                bookDetailsList = updatedList
+                                dailyGoal = goal
+                            }
                         }
                         composable("bookLog") {
-                            LogBookRead { newBook ->
+                            LogBookRead(navController) { newBook ->
                                 bookDetailsList = bookDetailsList + newBook
                                 navController.navigate("home") {
                                     popUpTo("home") { inclusive = true }
@@ -67,15 +62,12 @@ class MainActivity : ComponentActivity() {
                         composable("bookDetail/{bookName}") { backStackEntry ->
                             val bookName = backStackEntry.arguments?.getString("bookName") ?: ""
                             val bookDetails = bookDetailsList.find { it.name == bookName }
-                            bookDetails?.let { details ->
-                                BookDetailScreen(
-                                    bookDetails = details,
-                                    onUpdate = { updatedDetails ->
-                                        bookDetailsList = bookDetailsList.map {
-                                            if (it.name == updatedDetails.name) updatedDetails else it
-                                        }
+                            if (bookDetails != null) {
+                                BookDetailScreen(bookDetails, navController) { updatedDetails ->
+                                    bookDetailsList = bookDetailsList.map {
+                                        if (it.name == updatedDetails.name) updatedDetails else it
                                     }
-                                )
+                                }
                             }
                         }
                     }
@@ -187,39 +179,39 @@ fun HomeScreen(
 }
 
 @Composable
-fun LogBookRead(onBookLogged: (BookDetails) -> Unit) {
-    var bookName by remember { mutableStateOf("") }
-    var timeToday by remember { mutableStateOf("") }
-    var pagesRead by remember { mutableStateOf("") }
-    var bookRating by remember { mutableStateOf("") }
+fun LogBookRead(navController: NavHostController, onBookLogged: (BookDetails) -> Unit) {
+    val bookName = remember { mutableStateOf("") }
+    val timeToday = remember { mutableStateOf("") }
+    val pagesRead = remember { mutableStateOf("") }
+    val bookRating = remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         TextField(
-            value = bookName,
-            onValueChange = { bookName = it },
+            value = bookName.value,
+            onValueChange = { bookName.value = it },
             label = { Text("Enter book name") }
         )
 
         TextField(
-            value = timeToday,
-            onValueChange = { timeToday = it },
+            value = timeToday.value,
+            onValueChange = { timeToday.value = it },
             label = { Text("Time read today (hours)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
         )
 
         TextField(
-            value = pagesRead,
-            onValueChange = { pagesRead = it },
+            value = pagesRead.value,
+            onValueChange = { pagesRead.value = it },
             label = { Text("Pages read") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
         )
 
         TextField(
-            value = bookRating,
-            onValueChange = { bookRating = it },
+            value = bookRating.value,
+            onValueChange = { bookRating.value = it },
             label = { Text("Book rating (1-5)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
         )
@@ -227,13 +219,16 @@ fun LogBookRead(onBookLogged: (BookDetails) -> Unit) {
         Button(
             onClick = {
                 val bookDetails = BookDetails(
-                    name = bookName,
+                    name = bookName.value,
                     totalTime = 0.0, // Initial value, time will be updated in BookDetailScreen
-                    timeToday = timeToday.toDoubleOrNull() ?: 0.0,
-                    pages = pagesRead.toIntOrNull() ?: 0,
-                    rating = bookRating.toIntOrNull() ?: 0
+                    timeToday = timeToday.value.toDoubleOrNull() ?: 0.0,
+                    pages = pagesRead.value.toIntOrNull() ?: 0,
+                    rating = bookRating.value.toIntOrNull() ?: 1
                 )
                 onBookLogged(bookDetails)
+                navController.navigate("home") {
+                    popUpTo("home") { inclusive = true }
+                }
             },
             modifier = Modifier.padding(top = 16.dp)
         ) {
@@ -245,14 +240,11 @@ fun LogBookRead(onBookLogged: (BookDetails) -> Unit) {
 @Composable
 fun BookDetailScreen(
     bookDetails: BookDetails,
+    navController: NavHostController,
     onUpdate: (BookDetails) -> Unit
 ) {
     var showEditDialog by remember { mutableStateOf(false) }
-    var name by remember { mutableStateOf(bookDetails.name) }
-    var totalTime by remember { mutableStateOf(bookDetails.totalTime.toString()) }
-    var timeToday by remember { mutableStateOf(bookDetails.timeToday.toString()) }
-    var pages by remember { mutableStateOf(bookDetails.pages.toString()) }
-    var rating by remember { mutableStateOf(bookDetails.rating.toString()) }
+    var updatedBookDetails by remember { mutableStateOf(bookDetails) }
 
     if (showEditDialog) {
         AlertDialog(
@@ -260,6 +252,12 @@ fun BookDetailScreen(
             title = { Text("Edit Book Details") },
             text = {
                 Column {
+                    var name by remember { mutableStateOf(updatedBookDetails.name) }
+                    var totalTime by remember { mutableStateOf(updatedBookDetails.totalTime.toString()) }
+                    var timeToday by remember { mutableStateOf(updatedBookDetails.timeToday.toString()) }
+                    var pages by remember { mutableStateOf(updatedBookDetails.pages.toString()) }
+                    var rating by remember { mutableStateOf(updatedBookDetails.rating.toString()) }
+
                     TextField(
                         value = name,
                         onValueChange = { name = it },
@@ -290,30 +288,41 @@ fun BookDetailScreen(
                     TextField(
                         value = rating,
                         onValueChange = { rating = it },
-                        label = { Text("Rating") },
+                        label = { Text("Rating (1-5)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
+
+                    Button(
+                        onClick = {
+                            updatedBookDetails = updatedBookDetails.copy(
+                                name = name,
+                                totalTime = totalTime.toDoubleOrNull() ?: updatedBookDetails.totalTime,
+                                timeToday = timeToday.toDoubleOrNull() ?: updatedBookDetails.timeToday,
+                                pages = pages.toIntOrNull() ?: updatedBookDetails.pages,
+                                rating = rating.toIntOrNull() ?: updatedBookDetails.rating
+                            )
+                            onUpdate(updatedBookDetails)
+                            showEditDialog = false
+                        },
+                        modifier = Modifier.padding(top = 16.dp)
+                    ) {
+                        Text("Save Changes")
+                    }
                 }
             },
             confirmButton = {
                 Button(onClick = {
-                    onUpdate(
-                        BookDetails(
-                            name = name,
-                            totalTime = totalTime.toDoubleOrNull() ?: bookDetails.totalTime,
-                            timeToday = timeToday.toDoubleOrNull() ?: bookDetails.timeToday,
-                            pages = pages.toIntOrNull() ?: bookDetails.pages,
-                            rating = rating.toIntOrNull() ?: bookDetails.rating
-                        )
+                    updatedBookDetails = updatedBookDetails.copy(
+                        name = updatedBookDetails.name,
+                        totalTime = updatedBookDetails.totalTime,
+                        timeToday = updatedBookDetails.timeToday,
+                        pages = updatedBookDetails.pages,
+                        rating = updatedBookDetails.rating
                     )
+                    onUpdate(updatedBookDetails)
                     showEditDialog = false
                 }) {
                     Text("Save")
-                }
-            },
-            dismissButton = {
-                Button(onClick = { showEditDialog = false }) {
-                    Text("Cancel")
                 }
             }
         )
@@ -323,25 +332,36 @@ fun BookDetailScreen(
         modifier = Modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(text = "Book Details")
-        Text(text = "Name: ${bookDetails.name}")
-        Text(text = "Time read today: ${bookDetails.timeToday} hours")
-        Text(text = "Total time read: ${bookDetails.totalTime + bookDetails.timeToday} hours")
-
+        // Row for Home and Edit Buttons
         Row(
-            modifier = Modifier.padding(top = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Button(onClick = { /* Go back to Home Screen */ }) {
-                Text("Back to Home")
+            // Home Button
+            Button(
+                onClick = { navController.navigate("home") },
+                modifier = Modifier.padding(bottom = 16.dp)
+            ) {
+                Text("Home")
             }
 
+            // Edit Details Button
             Button(onClick = { showEditDialog = true }) {
                 Text("Edit Details")
             }
         }
+
+        Text("Book Details", fontSize = 24.sp)
+
+        Text("Name: ${bookDetails.name}")
+        Text("Total Time Read: ${bookDetails.totalTime} hours")
+        Text("Time Read Today: ${bookDetails.timeToday} hours")
+        Text("Pages Read: ${bookDetails.pages}")
+        Text("Rating: ${bookDetails.rating}")
     }
 }
+
+
 
 @Preview(showBackground = true)
 @Composable
@@ -349,11 +369,8 @@ fun DefaultPreview() {
     BookLoggerTheme {
         HomeScreen(
             navController = rememberNavController(),
-            bookDetailsList = listOf(
-                BookDetails("Book 1", 10.0, 1.0, 200, 4),
-                BookDetails("Book 2", 15.0, 2.0, 150, 5)
-            ),
-            dailyGoal = 2.0,
+            bookDetailsList = listOf(),
+            dailyGoal = 1.0,
             onUpdate = { _, _ -> }
         )
     }
