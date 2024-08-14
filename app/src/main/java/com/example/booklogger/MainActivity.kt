@@ -8,6 +8,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background // New import
+import androidx.compose.foundation.clickable // New import
+import androidx.compose.foundation.layout.Box // New import
+import androidx.compose.foundation.layout.height // New import
+import androidx.compose.foundation.layout.width // New import
+import androidx.compose.ui.graphics.Color // New import
+import androidx.compose.ui.unit.dp // New import
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -15,6 +22,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.booklogger.ui.theme.BookLoggerTheme
+import androidx.navigation.NavHostController // For navigation controller
+import androidx.navigation.compose.NavHost // For setting up the navigation host
+import androidx.navigation.compose.composable // For defining composable destinations
+import androidx.navigation.compose.rememberNavController // For creating the navigation controller
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,6 +34,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             BookLoggerTheme {
+                val navController = rememberNavController()
+
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Greeting(
                         name = "Book Logger",
@@ -46,6 +60,16 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
         Text(
             text = "Recently Read",
             modifier = modifier
+        )
+
+        Box(
+            modifier = Modifier
+                .width(200.dp)
+                .height(100.dp)
+                .background(Color.Gray)
+                .clickable {
+                    navController.navigate("new_page")
+                }
         )
     }
 }
