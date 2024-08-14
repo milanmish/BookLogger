@@ -27,7 +27,8 @@ data class BookDetails(
     val totalTime: Double,
     val timeToday: Double,
     val pages: Int,
-    val rating: Int
+    val rating: Int,
+    val creationTimestamp: Long // Store timestamp when the book was created
 )
 
 class MainActivity : ComponentActivity() {
@@ -218,12 +219,14 @@ fun LogBookRead(navController: NavHostController, onBookLogged: (BookDetails) ->
 
         Button(
             onClick = {
+                val currentTimestamp = System.currentTimeMillis()
                 val bookDetails = BookDetails(
                     name = bookName.value,
-                    totalTime = 0.0, // Initial value, time will be updated in BookDetailScreen
+                    totalTime = timeToday.value.toDoubleOrNull() ?: 0.0,
                     timeToday = timeToday.value.toDoubleOrNull() ?: 0.0,
                     pages = pagesRead.value.toIntOrNull() ?: 0,
-                    rating = bookRating.value.toIntOrNull() ?: 1
+                    rating = bookRating.value.toIntOrNull() ?: 1,
+                    creationTimestamp = currentTimestamp
                 )
                 onBookLogged(bookDetails)
                 navController.navigate("home") {
@@ -245,6 +248,24 @@ fun BookDetailScreen(
 ) {
     var showEditDialog by remember { mutableStateOf(false) }
     var updatedBookDetails by remember { mutableStateOf(bookDetails) }
+
+    // Function to reset timeToday and update totalTime
+    fun updateBookDetails(newTimeToday: Double) {
+        val currentTimestamp = System.currentTimeMillis()
+        val daysSinceCreation = (currentTimestamp - bookDetails.creationTimestamp) / (24 * 60 * 60 * 1000)
+
+        val newTotalTime = if (daysSinceCreation >= 1) {
+            updatedBookDetails.totalTime + newTimeToday
+        } else {
+            updatedBookDetails.totalTime
+        }
+
+        updatedBookDetails = updatedBookDetails.copy(
+            timeToday = if (daysSinceCreation >= 1) 0.0 else newTimeToday,
+            totalTime = newTotalTime
+        )
+        onUpdate(updatedBookDetails)
+    }
 
     if (showEditDialog) {
         AlertDialog(
@@ -294,14 +315,8 @@ fun BookDetailScreen(
 
                     Button(
                         onClick = {
-                            updatedBookDetails = updatedBookDetails.copy(
-                                name = name,
-                                totalTime = totalTime.toDoubleOrNull() ?: updatedBookDetails.totalTime,
-                                timeToday = timeToday.toDoubleOrNull() ?: updatedBookDetails.timeToday,
-                                pages = pages.toIntOrNull() ?: updatedBookDetails.pages,
-                                rating = rating.toIntOrNull() ?: updatedBookDetails.rating
-                            )
-                            onUpdate(updatedBookDetails)
+                            val newTimeToday = timeToday.toDoubleOrNull() ?: 0.0
+                            updateBookDetails(newTimeToday)
                             showEditDialog = false
                         },
                         modifier = Modifier.padding(top = 16.dp)
@@ -312,14 +327,8 @@ fun BookDetailScreen(
             },
             confirmButton = {
                 Button(onClick = {
-                    updatedBookDetails = updatedBookDetails.copy(
-                        name = updatedBookDetails.name,
-                        totalTime = updatedBookDetails.totalTime,
-                        timeToday = updatedBookDetails.timeToday,
-                        pages = updatedBookDetails.pages,
-                        rating = updatedBookDetails.rating
-                    )
-                    onUpdate(updatedBookDetails)
+                    val newTimeToday = updatedBookDetails.timeToday
+                    updateBookDetails(newTimeToday)
                     showEditDialog = false
                 }) {
                     Text("Save")
@@ -361,17 +370,10 @@ fun BookDetailScreen(
     }
 }
 
-
-
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
     BookLoggerTheme {
-        HomeScreen(
-            navController = rememberNavController(),
-            bookDetailsList = listOf(),
-            dailyGoal = 1.0,
-            onUpdate = { _, _ -> }
-        )
+        HomeScreen(rememberNavController(), emptyList(), 1.0) { _, _ -> }
     }
 }
