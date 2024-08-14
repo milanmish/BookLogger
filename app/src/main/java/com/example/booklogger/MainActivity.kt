@@ -6,27 +6,19 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button // New import for button
+import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.Alignment
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -40,6 +32,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             BookLoggerTheme {
                 val navController = rememberNavController()
+                var loggedBooks by remember { mutableStateOf<List<String>>(emptyList()) }
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
@@ -47,8 +40,25 @@ class MainActivity : ComponentActivity() {
                         startDestination = "home",
                         Modifier.padding(innerPadding)
                     ) {
-                        composable("home") { HomeScreen(navController) }
-                        composable("bookLog") { LogBookRead(navController) }
+                        composable("home") {
+                            HomeScreen(
+                                navController = navController,
+                                loggedBooks = loggedBooks,
+                                onBookLogged = { newBook ->
+                                    loggedBooks = loggedBooks + newBook
+                                    navController.popBackStack() // Navigate back to the home screen
+                                }
+                            )
+                        }
+                        composable("bookLog") {
+                            LogBookRead(
+                                navController = navController,
+                                onBookLogged = { newBook ->
+                                    loggedBooks = loggedBooks + newBook
+                                    navController.popBackStack() // Navigate back to the home screen
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -57,7 +67,12 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun HomeScreen(navController: NavHostController, modifier: Modifier = Modifier) {
+fun HomeScreen(
+    navController: NavHostController,
+    loggedBooks: List<String>,
+    modifier: Modifier = Modifier,
+    onBookLogged: (String) -> Unit
+) {
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -72,29 +87,54 @@ fun HomeScreen(navController: NavHostController, modifier: Modifier = Modifier) 
             modifier = Modifier.padding(top = 8.dp, start = 16.dp, end = 16.dp)
         )
 
-        Box(
-            modifier = Modifier
-                .padding(16.dp)
-                .width(100.dp)
-                .height(150.dp)
-                .background(Color.Gray)
-                .clickable {
-                    navController.navigate("bookLog")
-                }
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = "+",
-                color = Color.White,
+            Box(
                 modifier = Modifier
-                    .padding(16.dp)
-                    .align(Alignment.Center)
-            )
+                    .width(100.dp)
+                    .height(150.dp)
+                    .background(Color.Gray)
+                    .clickable {
+                        navController.navigate("bookLog")
+                    }
+            ) {
+                Text(
+                    text = "+",
+                    color = Color.White,
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .align(Alignment.Center)
+                )
+            }
+
+            // Display logged books as buttons
+            loggedBooks.forEach { bookName ->
+                Box(
+                    modifier = Modifier
+                        .width(100.dp)
+                        .height(150.dp)
+                        .background(Color.Gray)
+                ) {
+                    Text(
+                        text = bookName,
+                        color = Color.White,
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .align(Alignment.Center)
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-fun LogBookRead(navController: NavHostController) {
+fun LogBookRead(
+    navController: NavHostController,
+    onBookLogged: (String) -> Unit
+) {
     val bookName = remember { mutableStateOf("") }
     val numPages = remember { mutableStateOf("") }
     val readingTime = remember { mutableStateOf("") }
@@ -130,14 +170,7 @@ fun LogBookRead(navController: NavHostController) {
         Button(
             onClick = {
                 // Handle the saving of data here
-                // For example, you might print the values or save them to a database
-                println("Book Name: ${bookName.value}")
-                println("Number of Pages: ${numPages.value}")
-                println("Reading Time: ${readingTime.value}")
-                println("Book Rating: ${bookRating.value}")
-
-                // Navigate back to the home screen
-                navController.popBackStack() // Pops the current screen off the stack
+                onBookLogged(bookName.value)
             },
             modifier = Modifier.padding(top = 16.dp)
         ) {
@@ -150,6 +183,6 @@ fun LogBookRead(navController: NavHostController) {
 @Composable
 fun HomeScreenPreview() {
     BookLoggerTheme {
-        HomeScreen(navController = rememberNavController())
+        HomeScreen(navController = rememberNavController(), loggedBooks = emptyList(), onBookLogged = {})
     }
 }
