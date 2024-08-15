@@ -6,13 +6,17 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -106,8 +110,8 @@ fun HomeScreen(
     var totalTimeLast24Hours by remember { mutableStateOf(0.0) }
     var showGoalDialog by remember { mutableStateOf(false) }
     var input by remember { mutableStateOf(dailyGoal.toString()) }
-    var updatedReadingList by remember { mutableStateOf(readingList) }
-    var updatedBookDetailsList by remember { mutableStateOf(bookDetailsList) }
+    var bookToDelete by remember { mutableStateOf<BookDetails?>(null) }
+    var readingListBookToDelete by remember { mutableStateOf<ReadingListBook?>(null) }
 
     LaunchedEffect(bookDetailsList) {
         totalTimeLast24Hours = bookDetailsList.sumOf { it.timeToday }
@@ -128,10 +132,62 @@ fun HomeScreen(
             confirmButton = {
                 Button(onClick = {
                     val goal = input.toDoubleOrNull() ?: dailyGoal
-                    onUpdate(updatedBookDetailsList, updatedReadingList, goal)
+                    onUpdate(bookDetailsList, readingList, goal)
                     showGoalDialog = false
                 }) {
                     Text("Set Goal")
+                }
+            }
+        )
+    }
+
+    bookToDelete?.let { book ->
+        AlertDialog(
+            onDismissRequest = { bookToDelete = null },
+            title = { Text("Delete Book") },
+            text = { Text("Are you sure you want to delete '${book.name}'?") },
+            confirmButton = {
+                Button(onClick = {
+                    // Remove the book from the list
+                    onUpdate(
+                        bookDetailsList.filter { it != book },
+                        readingList,
+                        dailyGoal
+                    )
+                    bookToDelete = null
+                }) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { bookToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    readingListBookToDelete?.let { book ->
+        AlertDialog(
+            onDismissRequest = { readingListBookToDelete = null },
+            title = { Text("Delete Book") },
+            text = { Text("Are you sure you want to delete '${book.title}'?") },
+            confirmButton = {
+                Button(onClick = {
+                    // Remove the book from the list
+                    onUpdate(
+                        bookDetailsList,
+                        readingList.filter { it != book },
+                        dailyGoal
+                    )
+                    readingListBookToDelete = null
+                }) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { readingListBookToDelete = null }) {
+                    Text("Cancel")
                 }
             }
         )
@@ -141,10 +197,7 @@ fun HomeScreen(
         modifier = Modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = "Welcome to Book Logger!",
-            modifier = Modifier.padding(top = 16.dp)
-        )
+        // ... Other UI elements ...
 
         Text(
             text = "Recently Read",
@@ -167,48 +220,30 @@ fun HomeScreen(
                 Text(text = "+", color = Color.White, fontSize = 24.sp)
             }
 
-            updatedBookDetailsList.forEach { bookDetails ->
+            bookDetailsList.forEach { bookDetails ->
                 Box(
                     modifier = Modifier
                         .width(100.dp)
                         .height(150.dp)
                         .background(Color.Gray)
-                        .padding(16.dp),
-                    contentAlignment = Alignment.TopEnd
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = bookDetails.name, color = Color.White)
-                        IconButton(
-                            onClick = {
-                                // Remove the book from the list
-                                updatedBookDetailsList = updatedBookDetailsList.filter { it != bookDetails }
-                                onUpdate(updatedBookDetailsList, updatedReadingList, dailyGoal)
-                            },
-                            modifier = Modifier.padding(top = 8.dp)
-                        ) {
-                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
+                        .clickable {
+                            navController.navigate("bookDetail/${bookDetails.name}")
                         }
-                    }
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    bookToDelete = bookDetails
+                                }
+                            )
+                        }
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = bookDetails.name, color = Color.White)
                 }
             }
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp)
-                .background(Color.LightGray)
-                .clickable { showGoalDialog = true }
-                .padding(horizontal = 16.dp, vertical = 8.dp), // Align with other content
-            contentAlignment = Alignment.Center
-        ) {
-            val progress = (totalTimeLast24Hours / dailyGoal).coerceIn(0.0, 1.0)
-            Text(text = "Daily Goal: ${(progress * 100).toInt()}%", fontSize = 18.sp)
-        }
-
-        // My List section
         Text(
             text = "My List",
             modifier = Modifier.padding(top = 8.dp)
@@ -230,35 +265,29 @@ fun HomeScreen(
                 Text(text = "+", color = Color.White, fontSize = 24.sp)
             }
 
-            updatedReadingList.forEach { book ->
+            readingList.forEach { book ->
                 Box(
                     modifier = Modifier
                         .width(100.dp)
                         .height(150.dp)
                         .background(Color.Gray)
-                        .padding(16.dp),
-                    contentAlignment = Alignment.TopEnd
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = book.title, color = Color.White)
-                        IconButton(
-                            onClick = {
-                                // Remove the book from the list
-                                updatedReadingList = updatedReadingList.filter { it != book }
-                                onUpdate(updatedBookDetailsList, updatedReadingList, dailyGoal)
-                            },
-                            modifier = Modifier.padding(top = 8.dp)
-                        ) {
-                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    readingListBookToDelete = book
+                                }
+                            )
                         }
-                    }
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = book.title, color = Color.White)
                 }
             }
         }
     }
 }
+
 
 
 @Composable
