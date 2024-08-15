@@ -4,7 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -14,7 +16,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -196,7 +200,7 @@ fun HomeScreen(
         // Progress Bar with time metrics
         var showProgressDialog by remember { mutableStateOf(false) }
 
-        val progressPercentage = (totalTimeLast24Hours / dailyGoal).coerceAtMost(1.0).toFloat()
+        val progressPercentage = (totalTimeLast24Hours / dailyGoal).coerceAtMost(1.0) * 100
         val formattedTime = "%.1f hours".format(totalTimeLast24Hours)
         val formattedGoal = "%.1f hours".format(dailyGoal)
 
@@ -215,11 +219,12 @@ fun HomeScreen(
                     .background(Color.Gray)
             ) {
                 LinearProgressIndicator(
-                    progress = progressPercentage,
+                    progress = progressPercentage / 100f,
                     modifier = Modifier
                         .fillMaxHeight()
                         .align(Alignment.CenterStart),
-                    color = Color.Green
+                    color = Color.Green,
+                    backgroundColor = Color.LightGray
                 )
             }
 
@@ -290,7 +295,14 @@ fun HomeScreen(
                         .width(100.dp)
                         .height(150.dp)
                         .background(Color.Gray)
-                        .clickable { /* Handle click if needed */ }
+                        .clickable {
+                            navController.navigate("bookDetail/${bookDetails.name}")
+                        }
+                        .pointerInput(Unit) {
+                            detectTapGestures(onLongPress = {
+                                bookToDelete = bookDetails
+                            })
+                        }
                         .padding(8.dp),
                     contentAlignment = Alignment.TopEnd
                 ) {
@@ -337,7 +349,11 @@ fun HomeScreen(
                         .width(100.dp)
                         .height(150.dp)
                         .background(Color.Gray)
-                        .clickable { /* Handle click if needed */ }
+                        .pointerInput(Unit) {
+                            detectTapGestures(onLongPress = {
+                                readingListBookToDelete = readingListBook
+                            })
+                        }
                         .padding(8.dp),
                     contentAlignment = Alignment.TopEnd
                 ) {
@@ -424,6 +440,7 @@ fun LogBookRead(navController: NavHostController, onBookAdded: (BookDetails) -> 
 fun AddReadingListBook(navController: NavHostController, onBookAdded: (ReadingListBook) -> Unit) {
     var title by remember { mutableStateOf("") }
     var author by remember { mutableStateOf("") }
+    var genre by remember { mutableStateOf("Fiction") }
 
     Column(
         modifier = Modifier.padding(16.dp),
@@ -439,6 +456,16 @@ fun AddReadingListBook(navController: NavHostController, onBookAdded: (ReadingLi
             onValueChange = { author = it },
             label = { Text("Author") }
         )
+        DropdownMenu(
+            expanded = true,
+            onDismissRequest = { /* Do nothing */ }
+        ) {
+            listOf("Fiction", "Non-fiction", "Other").forEach { option ->
+                DropdownMenuItem(onClick = { genre = option }) {
+                    Text(text = option)
+                }
+            }
+        }
 
         Button(onClick = {
             if (title.isNotBlank() && author.isNotBlank()) {
@@ -446,7 +473,7 @@ fun AddReadingListBook(navController: NavHostController, onBookAdded: (ReadingLi
                     ReadingListBook(
                         title = title,
                         author = author,
-                        genre = "Fiction" // Default genre
+                        genre = genre
                     )
                 )
             }
@@ -457,13 +484,8 @@ fun AddReadingListBook(navController: NavHostController, onBookAdded: (ReadingLi
     }
 }
 
-
 @Composable
-fun BookDetailScreen(
-    bookDetails: BookDetails,
-    navController: NavHostController,
-    onDetailsUpdated: (BookDetails) -> Unit
-) {
+fun BookDetailScreen(bookDetails: BookDetails, navController: NavHostController, onDetailsUpdated: (BookDetails) -> Unit) {
     var timeToday by remember { mutableStateOf(bookDetails.timeToday.toString()) }
     var pages by remember { mutableStateOf(bookDetails.pages.toString()) }
     var rating by remember { mutableStateOf(bookDetails.rating.toString()) }
@@ -472,57 +494,42 @@ fun BookDetailScreen(
         modifier = Modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(text = "Book Details: ${bookDetails.name}")
+        Text("Book Details: ${bookDetails.name}")
 
         TextField(
             value = timeToday,
             onValueChange = { timeToday = it },
             label = { Text("Time Read Today (hours)") },
-            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-            singleLine = true
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
         )
-
         TextField(
             value = pages,
             onValueChange = { pages = it },
             label = { Text("Pages Read") },
-            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-            singleLine = true
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
         )
-
         TextField(
             value = rating,
             onValueChange = { rating = it },
             label = { Text("Rating (1-5)") },
-            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-            singleLine = true
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
         )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Button(
-                onClick = {
-                    onDetailsUpdated(
-                        bookDetails.copy(
-                            timeToday = timeToday.toDoubleOrNull() ?: bookDetails.timeToday,
-                            pages = pages.toIntOrNull() ?: bookDetails.pages,
-                            rating = rating.toIntOrNull() ?: bookDetails.rating
-                        )
-                    )
-                    navController.popBackStack()
-                }
-            ) {
-                Text("Update Details")
-            }
+        Button(onClick = {
+            onDetailsUpdated(
+                bookDetails.copy(
+                    timeToday = timeToday.toDoubleOrNull() ?: bookDetails.timeToday,
+                    pages = pages.toIntOrNull() ?: bookDetails.pages,
+                    rating = rating.toIntOrNull() ?: bookDetails.rating
+                )
+            )
+            navController.popBackStack()
+        }) {
+            Text("Update Details")
+        }
 
-            Button(
-                onClick = { navController.navigate("home") }
-            ) {
-                Text("Back to Home")
-            }
+        Button(onClick = { navController.navigate("home") }) {
+            Text("Back to Home")
         }
     }
 }
-
