@@ -4,13 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,6 +23,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.booklogger.ui.theme.BookLoggerTheme
+import androidx.compose.ui.text.font.FontWeight
 
 data class BookDetails(
     val name: String,
@@ -33,7 +31,7 @@ data class BookDetails(
     val timeToday: Double,
     val pages: Int,
     val rating: Int,
-    val creationTimestamp: Long // Store timestamp when the book was created
+    val creationTimestamp: Long
 )
 
 data class ReadingListBook(
@@ -59,14 +57,19 @@ class MainActivity : ComponentActivity() {
                         Modifier.padding(innerPadding)
                     ) {
                         composable("home") {
-                            HomeScreen(navController, bookDetailsList, readingList, dailyGoal) { updatedList, updatedReadingList, goal ->
+                            HomeScreen(
+                                navController,
+                                bookDetailsList,
+                                readingList,
+                                dailyGoal
+                            ) { updatedList, updatedReadingList, goal ->
                                 bookDetailsList = updatedList
                                 readingList = updatedReadingList
                                 dailyGoal = goal
                             }
                         }
                         composable("bookLog") {
-                            LogBookRead(navController) { newBook ->
+                            LogBookRead { newBook ->
                                 bookDetailsList = bookDetailsList + newBook
                                 navController.navigate("home") {
                                     popUpTo("home") { inclusive = true }
@@ -74,7 +77,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         composable("addReadingListBook") {
-                            AddReadingListBook(navController) { newBook ->
+                            AddReadingListBook { newBook ->
                                 readingList = readingList + newBook
                                 navController.navigate("home") {
                                     popUpTo("home") { inclusive = true }
@@ -82,7 +85,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         composable("bookDetail/{bookName}") { backStackEntry ->
-                            val bookName = backStackEntry.arguments?.getString("bookName") ?: ""
+                            val bookName = backStackEntry.arguments?.getString("bookName")
                             val bookDetails = bookDetailsList.find { it.name == bookName }
                             if (bookDetails != null) {
                                 BookDetailScreen(bookDetails, navController) { updatedDetails ->
@@ -90,6 +93,9 @@ class MainActivity : ComponentActivity() {
                                         if (it.name == updatedDetails.name) updatedDetails else it
                                     }
                                 }
+                            } else {
+                                // Handle case where bookDetails is null
+                                Text(text = "Book not found", modifier = Modifier.padding(16.dp))
                             }
                         }
                     }
@@ -148,7 +154,6 @@ fun HomeScreen(
             text = { Text("Are you sure you want to delete '${book.name}'?") },
             confirmButton = {
                 Button(onClick = {
-                    // Remove the book from the list
                     onUpdate(
                         bookDetailsList.filter { it != book },
                         readingList,
@@ -174,7 +179,6 @@ fun HomeScreen(
             text = { Text("Are you sure you want to delete '${book.title}'?") },
             confirmButton = {
                 Button(onClick = {
-                    // Remove the book from the list
                     onUpdate(
                         bookDetailsList,
                         readingList.filter { it != book },
@@ -197,8 +201,6 @@ fun HomeScreen(
         modifier = Modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // ... Other UI elements ...
-
         Text(
             text = "Recently Read",
             modifier = Modifier.padding(top = 8.dp)
@@ -288,11 +290,8 @@ fun HomeScreen(
     }
 }
 
-
-
 @Composable
 fun LogBookRead(
-    navController: NavHostController,
     onBookLogged: (BookDetails) -> Unit
 ) {
     val bookName = remember { mutableStateOf("") }
@@ -333,42 +332,29 @@ fun LogBookRead(
 
         Button(
             onClick = {
-                val timeReadToday = timeToday.value.toDoubleOrNull() ?: 0.0
-                val pages = pagesRead.value.toIntOrNull() ?: 0
-                val rating = bookRating.value.toIntOrNull() ?: 1
-
-                val newBook = BookDetails(
+                val bookDetails = BookDetails(
                     name = bookName.value,
-                    totalTime = timeReadToday, // Initially equal to time read today
-                    timeToday = timeReadToday,
-                    pages = pages,
-                    rating = rating,
+                    totalTime = 0.0,
+                    timeToday = timeToday.value.toDoubleOrNull() ?: 0.0,
+                    pages = pagesRead.value.toIntOrNull() ?: 0,
+                    rating = bookRating.value.toIntOrNull() ?: 0,
                     creationTimestamp = System.currentTimeMillis()
                 )
-                onBookLogged(newBook)
-                navController.navigate("home") {
-                    popUpTo("home") { inclusive = true }
-                }
-            },
-            modifier = Modifier.padding(top = 16.dp)
+                onBookLogged(bookDetails)
+            }
         ) {
             Text("Log Book")
         }
     }
 }
 
-
-
 @Composable
 fun AddReadingListBook(
-    navController: NavHostController,
     onBookAdded: (ReadingListBook) -> Unit
 ) {
     val title = remember { mutableStateOf("") }
     val author = remember { mutableStateOf("") }
-    val selectedGenre = remember { mutableStateOf("Fiction") }
-    val genres = listOf("Fiction", "Non-fiction", "Other")
-    var expanded by remember { mutableStateOf(false) }
+    val genre = remember { mutableStateOf("Fiction") }
 
     Column(
         modifier = Modifier.padding(16.dp),
@@ -377,135 +363,116 @@ fun AddReadingListBook(
         TextField(
             value = title.value,
             onValueChange = { title.value = it },
-            label = { Text("Enter book title") },
-            modifier = Modifier.fillMaxWidth()
+            label = { Text("Enter book title") }
         )
+
         TextField(
             value = author.value,
             onValueChange = { author.value = it },
-            label = { Text("Enter book author") },
-            modifier = Modifier.fillMaxWidth()
+            label = { Text("Enter book author") }
         )
 
-        // Genre Selection Box
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = !expanded }
-                .background(Color.White)
-                .border(1.dp, Color.Gray)
-                .padding(16.dp)
-        ) {
-            Text(text = "Select genre: ${selectedGenre.value}", color = Color.Black)
-        }
-
-        // Dropdown Menu for genres
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            genres.forEach { genreOption ->
-                DropdownMenuItem(
-                    onClick = {
-                        selectedGenre.value = genreOption
-                        expanded = false
-                    },
-                    text = { Text(text = genreOption) } // Correctly provide the text parameter
-                )
-            }
-        }
+        TextField(
+            value = genre.value,
+            onValueChange = { genre.value = it },
+            label = { Text("Enter book genre") }
+        )
 
         Button(
             onClick = {
                 val newBook = ReadingListBook(
                     title = title.value,
                     author = author.value,
-                    genre = selectedGenre.value
+                    genre = genre.value
                 )
                 onBookAdded(newBook)
-                navController.navigate("home") {
-                    popUpTo("home") { inclusive = true }
-                }
-            },
-            modifier = Modifier.padding(top = 16.dp)
+            }
         ) {
-            Text("Add Book")
+            Text("Add to List")
         }
     }
 }
-
 
 @Composable
 fun BookDetailScreen(
     bookDetails: BookDetails,
     navController: NavHostController,
-    onDetailsUpdated: (BookDetails) -> Unit
+    onUpdate: (BookDetails) -> Unit
 ) {
-    val bookName = remember { mutableStateOf(bookDetails.name) }
-    val totalTime = remember { mutableStateOf(bookDetails.totalTime.toString()) }
-    val timeToday = remember { mutableStateOf(bookDetails.timeToday.toString()) }
-    val pages = remember { mutableStateOf(bookDetails.pages.toString()) }
-    val rating = remember { mutableStateOf(bookDetails.rating.toString()) }
+    var timeRead by remember { mutableStateOf(bookDetails.timeToday.toString()) }
+    var pages by remember { mutableStateOf(bookDetails.pages.toString()) }
+    var rating by remember { mutableStateOf(bookDetails.rating.toString()) }
 
     Column(
         modifier = Modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        TextField(
-            value = bookName.value,
-            onValueChange = { bookName.value = it },
-            label = { Text("Book name") }
+        Text(
+            text = bookDetails.name,
+            fontSize = 24.sp, // Use a specific font size
+            fontWeight = FontWeight.Bold // Use bold weight
         )
+
         TextField(
-            value = totalTime.value,
-            onValueChange = { totalTime.value = it },
-            label = { Text("Total time spent reading (hours)") },
+            value = timeRead,
+            onValueChange = { timeRead = it },
+            label = { Text("Time read today (hours)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
         )
+
         TextField(
-            value = timeToday.value,
-            onValueChange = { timeToday.value = it },
-            label = { Text("Time spent reading today (hours)") },
+            value = pages,
+            onValueChange = { pages = it },
+            label = { Text("Pages read") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
         )
+
         TextField(
-            value = pages.value,
-            onValueChange = { pages.value = it },
-            label = { Text("Number of pages read") },
+            value = rating,
+            onValueChange = { rating = it },
+            label = { Text("Book rating (1-5)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
         )
-        TextField(
-            value = rating.value,
-            onValueChange = { rating.value = it },
-            label = { Text("Book rating (out of 5)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-        )
+
         Button(
             onClick = {
                 val updatedBook = bookDetails.copy(
-                    name = bookName.value,
-                    totalTime = totalTime.value.toDoubleOrNull() ?: 0.0,
-                    timeToday = timeToday.value.toDoubleOrNull() ?: 0.0,
-                    pages = pages.value.toIntOrNull() ?: 0,
-                    rating = rating.value.toIntOrNull() ?: 0
+                    timeToday = timeRead.toDoubleOrNull() ?: bookDetails.timeToday,
+                    pages = pages.toIntOrNull() ?: bookDetails.pages,
+                    rating = rating.toIntOrNull() ?: bookDetails.rating
                 )
-                onDetailsUpdated(updatedBook)
-                navController.navigate("home") {
-                    popUpTo("home") { inclusive = true }
-                }
-            },
-            modifier = Modifier.padding(top = 16.dp)
+                onUpdate(updatedBook)
+                navController.popBackStack() // Navigate back to home screen
+            }
         ) {
-            Text("Update Details")
+            Text("Update")
+        }
+
+        Button(
+            onClick = { navController.popBackStack() }
+        ) {
+            Text("Back to Home")
         }
     }
 }
+
+
 
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
     BookLoggerTheme {
         val navController = rememberNavController()
-        HomeScreen(navController, emptyList(), emptyList(), 1.0) { _, _, _ -> }
+        HomeScreen(
+            navController,
+            bookDetailsList = listOf(
+                BookDetails("Book A", 1.0, 1.0, 100, 4, System.currentTimeMillis()),
+                BookDetails("Book B", 2.0, 1.0, 200, 5, System.currentTimeMillis())
+            ),
+            readingList = listOf(
+                ReadingListBook("Book C", "Author C", "Fiction")
+            ),
+            dailyGoal = 2.0
+        ) { _, _, _ -> }
     }
 }
