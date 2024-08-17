@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -25,10 +26,15 @@ import androidx.navigation.NavType
 import com.example.booklogger.ui.theme.BookLoggerTheme
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.mutableStateOf
 
 class BookViewModel : ViewModel() {
     // List of books
     var books = mutableStateListOf<Map<String, String>>()
+
+    // State for progress bar
+    var dailyGoal = mutableStateOf(0f)
+    var timeRead = mutableStateOf(0f)
 }
 
 class MainActivity : ComponentActivity() {
@@ -75,13 +81,46 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+
 @Composable
 fun MainScreen(navController: NavHostController, bookViewModel: BookViewModel) {
+    var isDialogVisible by remember { mutableStateOf(false) }
+
+    val progress = if (bookViewModel.dailyGoal.value > 0) bookViewModel.timeRead.value / bookViewModel.dailyGoal.value else 0f
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 16.dp)
     ) {
+        // Progress bar section
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(8.dp)
+                    .clickable { isDialogVisible = true },
+                color = Color.Blue,
+                trackColor = Color.LightGray,
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = "${bookViewModel.timeRead.value.toInt()} / ${bookViewModel.dailyGoal.value.toInt()} hours",
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         Text(
             text = "Book Logger",
             style = MaterialTheme.typography.headlineMedium.copy(
@@ -132,6 +171,46 @@ fun MainScreen(navController: NavHostController, bookViewModel: BookViewModel) {
                     Text(text = book["title"] ?: "", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
+        }
+
+        // Dialog for setting reading goal and time read
+        if (isDialogVisible) {
+            AlertDialog(
+                onDismissRequest = { isDialogVisible = false },
+                title = { Text("Set Reading Goal and Time Read") },
+                text = {
+                    Column {
+                        TextField(
+                            value = bookViewModel.timeRead.value.toString(),
+                            onValueChange = { value ->
+                                bookViewModel.timeRead.value = value.toFloatOrNull() ?: 0f
+                            },
+                            label = { Text("Time Read (hours)") },
+                            keyboardOptions = KeyboardOptions.Default.copy(
+                                keyboardType = KeyboardType.Number
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextField(
+                            value = bookViewModel.dailyGoal.value.toString(),
+                            onValueChange = { value ->
+                                bookViewModel.dailyGoal.value = value.toFloatOrNull() ?: 0f
+                            },
+                            label = { Text("Reading Goal (hours)") },
+                            keyboardOptions = KeyboardOptions.Default.copy(
+                                keyboardType = KeyboardType.Number
+                            )
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { isDialogVisible = false }
+                    ) {
+                        Text("OK")
+                    }
+                }
+            )
         }
     }
 }
