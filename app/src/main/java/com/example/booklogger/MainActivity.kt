@@ -23,6 +23,13 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import com.example.booklogger.ui.theme.BookLoggerTheme
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+
+class BookViewModel : ViewModel() {
+    // List of books
+    var books = mutableStateListOf<Map<String, String>>()
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,14 +38,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             BookLoggerTheme {
                 val navController = rememberNavController()
+                val bookViewModel: BookViewModel = viewModel()
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
                         navController = navController,
                         startDestination = "home",
                         modifier = Modifier.padding(innerPadding)
                     ) {
-                        composable("home") { MainScreen(navController) }
-                        composable("bookLogger") { BookLogger(navController) }
+                        composable("home") { MainScreen(navController, bookViewModel) }
+                        composable("bookLogger") { BookLogger(navController, bookViewModel) }
                         composable(
                             "bookDetails/{title}/{author}/{pages}/{timeSpent}",
                             arguments = listOf(
@@ -68,15 +76,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainScreen(navController: NavHostController) {
-    var books by remember { mutableStateOf(listOf<Map<String, String>>()) }
-
-    val newBook = navController.currentBackStackEntry?.savedStateHandle?.get<Map<String, String>>("newBook")
-    newBook?.let {
-        books = books + it
-        navController.currentBackStackEntry?.savedStateHandle?.remove<Map<String, String>>("newBook")
-    }
-
+fun MainScreen(navController: NavHostController, bookViewModel: BookViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -119,7 +119,7 @@ fun MainScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            books.forEach { book ->
+            bookViewModel.books.forEach { book ->
                 Button(
                     onClick = {
                         navController.navigate("bookDetails/${book["title"]}/${book["author"]}/${book["pages"]}/${book["timeSpent"]}")
@@ -137,7 +137,7 @@ fun MainScreen(navController: NavHostController) {
 }
 
 @Composable
-fun BookLogger(navController: NavHostController) {
+fun BookLogger(navController: NavHostController, bookViewModel: BookViewModel) {
     var title by remember { mutableStateOf("") }
     var author by remember { mutableStateOf("") }
     var pages by remember { mutableStateOf("") }
@@ -201,7 +201,7 @@ fun BookLogger(navController: NavHostController) {
                         "pages" to pages,
                         "timeSpent" to timeSpent
                     )
-                    navController.previousBackStackEntry?.savedStateHandle?.set("newBook", book)
+                    bookViewModel.books.add(book)
                     navController.popBackStack()
                 }
             },
