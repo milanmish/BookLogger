@@ -33,8 +33,8 @@ class BookViewModel : ViewModel() {
     var books = mutableStateListOf<Map<String, String>>()
 
     // State for progress bar
-    var dailyGoal = mutableStateOf(0f)
-    var timeRead = mutableStateOf(0f)
+    var dailyGoal by mutableStateOf("")
+    var timeRead by mutableStateOf("")
 }
 
 class MainActivity : ComponentActivity() {
@@ -84,9 +84,14 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainScreen(navController: NavHostController, bookViewModel: BookViewModel) {
-    var isDialogVisible by remember { mutableStateOf(false) }
+    val dailyGoal = bookViewModel.dailyGoal
+    val timeRead = bookViewModel.timeRead
 
-    val progress = if (bookViewModel.dailyGoal.value > 0) bookViewModel.timeRead.value / bookViewModel.dailyGoal.value else 0f
+    val dailyGoalFloat = dailyGoal.toFloatOrNull() ?: 0f
+    val timeReadFloat = timeRead.toFloatOrNull() ?: 0f
+    val progress = if (dailyGoalFloat > 0) timeReadFloat / dailyGoalFloat else 0f
+
+    var isDialogVisible by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -114,7 +119,7 @@ fun MainScreen(navController: NavHostController, bookViewModel: BookViewModel) {
             Spacer(modifier = Modifier.width(8.dp))
 
             Text(
-                text = "${bookViewModel.timeRead.value.toInt()} / ${bookViewModel.dailyGoal.value.toInt()} hours",
+                text = "${timeReadFloat.toInt()} / ${dailyGoalFloat.toInt()} hours",
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
             )
         }
@@ -181,9 +186,9 @@ fun MainScreen(navController: NavHostController, bookViewModel: BookViewModel) {
                 text = {
                     Column {
                         TextField(
-                            value = bookViewModel.timeRead.value.toString(),
+                            value = timeRead,
                             onValueChange = { value ->
-                                bookViewModel.timeRead.value = value.toFloatOrNull() ?: 0f
+                                bookViewModel.timeRead = value
                             },
                             label = { Text("Time Read (hours)") },
                             keyboardOptions = KeyboardOptions.Default.copy(
@@ -192,9 +197,9 @@ fun MainScreen(navController: NavHostController, bookViewModel: BookViewModel) {
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         TextField(
-                            value = bookViewModel.dailyGoal.value.toString(),
+                            value = dailyGoal,
                             onValueChange = { value ->
-                                bookViewModel.dailyGoal.value = value.toFloatOrNull() ?: 0f
+                                bookViewModel.dailyGoal = value
                             },
                             label = { Text("Reading Goal (hours)") },
                             keyboardOptions = KeyboardOptions.Default.copy(
@@ -214,6 +219,7 @@ fun MainScreen(navController: NavHostController, bookViewModel: BookViewModel) {
         }
     }
 }
+
 
 @Composable
 fun BookLogger(navController: NavHostController, bookViewModel: BookViewModel) {
