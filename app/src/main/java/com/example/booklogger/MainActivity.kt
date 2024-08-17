@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -24,8 +23,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import com.example.booklogger.ui.theme.BookLoggerTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 
@@ -41,14 +38,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             BookLoggerTheme {
                 val navController = rememberNavController()
+                val bookViewModel: BookViewModel = viewModel()
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
                         navController = navController,
                         startDestination = "home",
                         modifier = Modifier.padding(innerPadding)
                     ) {
-                        composable("home") { MainScreen(navController) }
-                        composable("bookLogger") { BookLogger(navController) }
+                        composable("home") { MainScreen(navController, bookViewModel) }
+                        composable("bookLogger") { BookLogger(navController, bookViewModel) }
                         composable(
                             "bookDetails/{title}/{author}/{pages}/{timeSpent}",
                             arguments = listOf(
@@ -78,88 +76,12 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainScreen(navController: NavHostController, bookViewModel: BookViewModel = viewModel()) {
-    // State to hold the reading goal and time read
-    var dailyGoal by remember { mutableStateOf(0f) }
-    var timeRead by remember { mutableStateOf(0f) }
-    var isDialogVisible by remember { mutableStateOf(false) }
-
-    // Calculate progress
-    val progress = if (dailyGoal > 0) timeRead / dailyGoal else 0f
-
+fun MainScreen(navController: NavHostController, bookViewModel: BookViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 16.dp)
     ) {
-        // Title and progress bar row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .weight(1f)
-                    .height(8.dp)
-                    .clickable { isDialogVisible = true },
-                color = Color.Blue,
-                trackColor = Color.LightGray,
-            )
-
-            Spacer(modifier = Modifier.width(8.dp)) // Gap between the bar and the text
-
-            Text(
-                text = "${timeRead.toInt()} hours read / ${dailyGoal.toInt()} hours",
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Show dialog for input if needed
-        if (isDialogVisible) {
-            AlertDialog(
-                onDismissRequest = { isDialogVisible = false },
-                title = { Text("Set Reading Goal and Time Read") },
-                text = {
-                    Column {
-                        TextField(
-                            value = timeRead.toString(),
-                            onValueChange = { value ->
-                                timeRead = value.toFloatOrNull() ?: 0f
-                            },
-                            label = { Text("Time Read (hours)") },
-                            keyboardOptions = KeyboardOptions.Default.copy(
-                                keyboardType = KeyboardType.Number
-                            )
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        TextField(
-                            value = dailyGoal.toString(),
-                            onValueChange = { value ->
-                                dailyGoal = value.toFloatOrNull() ?: 0f
-                            },
-                            label = { Text("Reading Goal (hours)") },
-                            keyboardOptions = KeyboardOptions.Default.copy(
-                                keyboardType = KeyboardType.Number
-                            )
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = { isDialogVisible = false }
-                    ) {
-                        Text("OK")
-                    }
-                }
-            )
-        }
-
-        // Main content
         Text(
             text = "Book Logger",
             style = MaterialTheme.typography.headlineMedium.copy(
@@ -214,9 +136,8 @@ fun MainScreen(navController: NavHostController, bookViewModel: BookViewModel = 
     }
 }
 
-
 @Composable
-fun BookLogger(navController: NavHostController, bookViewModel: BookViewModel = viewModel()) {
+fun BookLogger(navController: NavHostController, bookViewModel: BookViewModel) {
     var title by remember { mutableStateOf("") }
     var author by remember { mutableStateOf("") }
     var pages by remember { mutableStateOf("") }
@@ -320,10 +241,18 @@ fun BookDetails(title: String, author: String, pages: String, timeSpent: String,
             style = MaterialTheme.typography.bodyMedium
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        Button(onClick = { navController.popBackStack() }) {
-            Text("Back")
+        // Button to navigate back to MainScreen
+        Button(
+            onClick = {
+                navController.navigate("home") {
+                    popUpTo("home") { inclusive = true }
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Back to Home")
         }
     }
 }
