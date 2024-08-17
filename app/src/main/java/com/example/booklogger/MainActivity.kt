@@ -5,7 +5,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -84,14 +86,15 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainScreen(navController: NavHostController, bookViewModel: BookViewModel) {
-    val dailyGoal = bookViewModel.dailyGoal
-    val timeRead = bookViewModel.timeRead
+    val dailyGoal by remember { derivedStateOf { bookViewModel.dailyGoal } }
+    val timeRead by remember { derivedStateOf { bookViewModel.timeRead } }
+    var isDialogVisible by remember { mutableStateOf(false) }
 
+    // Convert state values to Float for calculation
     val dailyGoalFloat = dailyGoal.toFloatOrNull() ?: 0f
     val timeReadFloat = timeRead.toFloatOrNull() ?: 0f
-    val progress = if (dailyGoalFloat > 0) timeReadFloat / dailyGoalFloat else 0f
 
-    var isDialogVisible by remember { mutableStateOf(false) }
+    val progress = if (dailyGoalFloat > 0) timeReadFloat / dailyGoalFloat else 0f
 
     Column(
         modifier = Modifier
@@ -146,10 +149,12 @@ fun MainScreen(navController: NavHostController, bookViewModel: BookViewModel) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Horizontal scrollable row for books
+        val scrollState = rememberScrollState()
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(scrollState) // Make this row scrollable horizontally
         ) {
             Button(
                 onClick = { navController.navigate("bookLogger") },
@@ -161,7 +166,11 @@ fun MainScreen(navController: NavHostController, bookViewModel: BookViewModel) {
                 Text(text = "+", fontSize = 40.sp)
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            // Define the gap between book log button and the first book
+            val gapModifier = Modifier.width(16.dp)
+
+            // Add a spacer between the book log button and the first book
+            Spacer(gapModifier)
 
             bookViewModel.books.forEach { book ->
                 Button(
@@ -175,6 +184,9 @@ fun MainScreen(navController: NavHostController, bookViewModel: BookViewModel) {
                 ) {
                     Text(text = book["title"] ?: "", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
+
+                // Add a spacer between each book button
+                Spacer(gapModifier)
             }
         }
 
@@ -193,7 +205,8 @@ fun MainScreen(navController: NavHostController, bookViewModel: BookViewModel) {
                             label = { Text("Time Read (hours)") },
                             keyboardOptions = KeyboardOptions.Default.copy(
                                 keyboardType = KeyboardType.Number
-                            )
+                            ),
+                            placeholder = { Text("") } // Placeholder text to be blank
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         TextField(
@@ -204,7 +217,8 @@ fun MainScreen(navController: NavHostController, bookViewModel: BookViewModel) {
                             label = { Text("Reading Goal (hours)") },
                             keyboardOptions = KeyboardOptions.Default.copy(
                                 keyboardType = KeyboardType.Number
-                            )
+                            ),
+                            placeholder = { Text("") } // Placeholder text to be blank
                         )
                     }
                 },
